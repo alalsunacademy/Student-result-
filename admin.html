@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>رفع النتيجة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="parser.js"></script>
+</head><body><main>
+<h1>رفع النتيجة</h1>
+<div id="login" class="box" style="display:grid;gap:10px">
+  <input id="email" type="email" placeholder="ايميل الأدمن" autocomplete="username">
+  <input id="pw" type="password" placeholder="كلمة السر" autocomplete="current-password">
+  <button id="in">تسجيل الدخول</button>
+  <p class="err" id="lerr"></p>
+</div>
+<div id="app" hidden>
+  <p class="sub">ارفع ملف Excel، راجع المعاينة، ثم احفظ. <a href="#" id="outbtn">تسجيل الخروج</a></p>
+  <div class="box" style="display:grid;gap:10px">
+    <input id="title" placeholder="عنوان النتيجة (مثال: الفرقة الثانية - الفصل الثاني 2026)">
+    <input id="file" type="file" accept=".xlsx,.xls">
+    <button id="prev">معاينة الملف</button>
+  </div>
+  <div id="out"></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let parsed=null;
+async function check(){
+  const {data:{session}}=await sb.auth.getSession();
+  let ok=false;
+  if(session){const {data}=await sb.rpc('is_admin');ok=data===true;
+    if(!ok){await sb.auth.signOut();$('lerr').textContent='هذا الحساب ليس أدمن';}}
+  $('login').hidden=ok;$('app').hidden=!ok;
+}
+$('in').onclick=async()=>{
+  $('lerr').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pw').value});
+  if(error){$('lerr').textContent='الايميل أو كلمة السر غير صحيحة';return;}
+  check();
+};
+$('outbtn').onclick=async e=>{e.preventDefault();await sb.auth.signOut();check();};
+$('prev').onclick=async()=>{
+  const f=$('file').files[0];if(!f)return;
+  try{parsed=parseExcel(await f.arrayBuffer());}catch(err){$('out').innerHTML=`<p class="err">${esc(err.message)}</p>`;return;}
+  const d=parsed;
+  const head=d.subjects.map(s=>`<th>${esc(s.name)}</th>`).join('');
+  const body=d.students.map(s=>`<tr><td>${esc(s.seat_no)}</td><td>${esc(s.name)}</td>${s.subjects.map(x=>`<td class="n">${x.score??'-'}</td>`).join('')}<td class="n">${s.total}</td><td class="n">${s.percent}%</td><td>${esc(s.grade)}</td></tr>`).join('');
+  $('out').innerHTML=(d.warnings.length?`<div class="warn"><b>تنبيهات (${d.warnings.length}):</b><br>${d.warnings.map(esc).join('<br>')}</div>`:'')+
+  `<p>عدد الطلاب: ${d.students.length}</p><div class="scroll"><table><thead><tr><th>الجلوس</th><th>الاسم</th>${head}<th>المجموع</th><th>النسبة</th><th>التقدير</th></tr></thead><tbody>${body}</tbody></table></div><button id="save">حفظ النتيجة</button>`;
+  $('save').onclick=save;
+};
+async function save(){
+  const title=$('title').value.trim();
+  if(!title){alert('اكتب عنوان النتيجة');return;}
+  $('save').disabled=true;
+  const {data:ex,error:e1}=await sb.from('exams').insert({title}).select().single();
+  if(e1){$('out').innerHTML=`<p class="err">${esc(e1.message)}</p>`;return;}
+  const rows=parsed.students.map(s=>({...s,exam_id:ex.id}));
+  for(let i=0;i<rows.length;i+=200){
+    const {error}=await sb.from('students').upsert(rows.slice(i,i+200),{onConflict:'exam_id,seat_no'});
+    if(error){$('out').innerHTML=`<p class="err">${esc(error.message)}</p>`;return;}
+  }
+  $('out').innerHTML=`<p>تم حفظ ${rows.length} طالب.</p>`;
+}
+check();
+</script></body></html>

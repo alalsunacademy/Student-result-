@@ -1,0 +1,26 @@
+:root{--ink:#14213d;--paper:#f3f6fa;--card:#fff;--line:#d5dce8;--gold:#b8801f;--red:#b3261e;--green:#1b7a4b}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Cairo',Tahoma,sans-serif;background:var(--paper);color:var(--ink);line-height:1.7}
+main{max-width:620px;margin:0 auto;padding:32px 16px}
+h1{font-size:1.7rem;margin:0 0 4px}
+p.sub{margin:0 0 24px;color:#51607a}
+form,.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+form{display:flex;gap:8px}
+input,button{font:inherit;padding:12px 14px;border-radius:8px;border:1px solid var(--line)}
+input{flex:1;min-width:0}
+input:focus,button:focus-visible{outline:3px solid #7aa2e3;outline-offset:1px}
+button{background:var(--ink);color:#fff;border-color:var(--ink);cursor:pointer}
+.err{color:var(--red);margin-top:14px}
+.result{margin-top:20px}
+.result h2{margin:0}
+.meta{color:#51607a;margin:0 0 14px}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right}
+td.n{text-align:left;font-variant-numeric:tabular-nums}
+.sum{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:14px}
+.grade{font-size:2rem;font-weight:700;color:var(--gold)}
+.grade.fail{color:var(--red)}
+.pct{font-size:1.2rem}
+.warn{background:#fff6e0;border:1px solid #ecd49a;padding:10px;border-radius:8px;margin:12px 0;font-size:.9rem}
+.scroll{overflow-x:auto}
+@media (max-width:480px){form{flex-direction:column}}

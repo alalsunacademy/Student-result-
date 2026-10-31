@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نتيجة الطالب</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+</head><body><main>
+  <content><img src="icon.png" width="75" height="80"></content>
+<h1>نتيجة الطالب</h1>
+<p class="sub">اكتب رقم الجلوس لعرض نتيجتك.</p>
+<form id="f"><input id="seat" inputmode="numeric" placeholder="رقم الجلوس" required autofocus>
+<button>اعرض النتيجة</button></form>
+<div id="out" aria-live="polite"></div>
+</main>
+<script>
+const out=document.getElementById('out');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('f').addEventListener('submit',async e=>{
+  e.preventDefault(); out.innerHTML='';
+  const {data:d,error}=await sb.rpc('get_result',{p_seat:document.getElementById('seat').value.trim()});
+  if(error||!d){out.innerHTML=`<p class="err">${error?'حدث خطأ، حاول مرة أخرى':'رقم الجلوس غير موجود'}</p>`;return;}
+  const rows=d.subjects.map(s=>`<tr><td>${esc(s.name)}</td><td class="n">${s.score??'-'} / ${s.max}</td></tr>`).join('');
+  const bad=d.grade==='راسب'||d.absent;
+  out.innerHTML=`<div class="box result"><h2>${esc(d.name)}</h2>
+  <p class="meta">رقم الجلوس ${esc(d.seat_no)} · ${esc(d.title)}</p>
+  ${d.absent?'':`<div class="scroll"><table><thead><tr><th>المادة</th><th>الدرجة</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="sum"><span>المجموع ${d.total} من ${d.max_total}</span><span class="pct">${d.percent}%</span></div>`}
+  <div class="sum"><span>التقدير العام</span><span class="grade ${bad?'fail':''}">${esc(d.grade)}</span></div></div>`;
+});
+</script></body></html>
